@@ -1,0 +1,35 @@
+---
+  - name: install docker
+    hosts: webserver
+    user: ubuntu
+    sudo: true
+    gather_facts: False
+    tasks:
+      
+      - name: Install pip
+        shell: apt-get install python-pip python-dev build-essential -y
+      - name: Install dependencies
+        shell: pip install docker-py
+      - name: MySQL docker container
+        docker_container:
+          name: "mysql"
+          image: "mysql:5.5"
+          state: started
+          recreate: yes
+          pull: true
+          env:
+            MYSQL_ROOT_PASSWORD: "{{ mysql_master_password }}"
+            MYSQL_DATABASE: "{{ mysql_db_name }}"
+            MYSQL_USER: "{{ mysql_db_user }}"
+            MYSQL_PASSWORD: "{{ mysql_db_password }}"
+
+      - name: Wait a few minutes for the IPs to be set to the container
+        wait_for: timeout=120
+      
+      # The following tasks help with the connection of the containers in different hosts in Rancher
+      - name: Fetch the MySQL Container IP
+        shell: docker exec mysql ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1
+        register: mysql_sec_ip
+      
+      - name: print the mysql ip
+        debug: msg={{ mysql_sec_ip.stdout }}

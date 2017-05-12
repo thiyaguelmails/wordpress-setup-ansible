@@ -1,0 +1,137 @@
+---
+
+# roles/infra/tasks/main.yml
+
+# To create VPC.
+
+- name: Create VPC
+  ec2_vpc_net:
+    name: "{{ vpc_name }}"
+    cidr_block: "{{ vpc_cidr_block }}"
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: "present"
+  register: my_vpc
+
+# To set created VPC ID to local varibale.
+
+- name: Set VPC ID in variable
+  set_fact:
+    vpc_id: "{{ my_vpc.vpc.id }}"
+
+
+# To create public subnet under VPC created above.
+
+- name: Create Public Subnet
+  ec2_vpc_subnet:
+    state: "present"
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ public_subnet_cidr }}"
+    az: "{{ aws_region }}a"
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    resource_tags:
+      Name: "Public Subnet"
+  register: my_public_subnet
+
+
+# To set subnet id to local variable.
+
+- name: Set Public Subnet ID in variable
+  set_fact:
+    public_subnet_id: "{{ my_public_subnet.subnet.id }}"
+
+
+# To create IGW for VPC.
+
+- name: Create Internet Gateway for VPC
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: "present"
+  register: my_vpc_igw
+
+
+# To set IGW value to local variable.
+
+- name: Set Internet Gateway ID in variable
+  set_fact:
+    igw_id: "{{ my_vpc_igw.gateway_id }}"
+
+
+# To create Public route table.
+
+- name: Set up public subnet route table
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags:
+      Name: "Public"
+    subnets:
+      - "{{ public_subnet_id }}"
+    routes:
+      - dest:      "0.0.0.0/0"
+        gateway_id: "{{ igw_id }}"
+
+# To create security group for wordpress application.
+
+- name: Create WordPress Security Group
+  ec2_group:
+    name: "WP Security Group"
+    description: "WP Security Group"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    rules:
+      - proto: "tcp"
+        from_port: "22"
+        to_port: "22"
+        cidr_ip: "{{ trusted_ip_cidr }}"
+      - proto: "tcp"
+        from_port: "80"
+        to_port: "80"
+        cidr_ip: "0.0.0.0/0"
+  register: web_security_group
+
+# To select appropriate bare image
+
+- name: Search for Ubuntu AMI
+  ec2_ami_search:
+    region: "{{ aws_region }}"
+    distro: "ubuntu"
+    release: "trusty"
+    store: "ebs"
+    virt: "hvm"
+    arch: "amd64"
+  register: imgae_id
+
+# To set image_id to local variable
+
+- name: Set Image ID in variable
+  set_fact:
+    ami_id: "{{ imgae_id.ami }}"
+
+# To create webserver for wordpress app
+
+- name: Create the WebServer Instances
+  ec2:
+    region: "{{ aws_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    group: "WP Security Group"
+    keypair: "WP_keypair"
+    instance_type: "m3.medium"
+    image: "{{ ami_id }}"
+    vpc_subnet_id: "{{ public_subnet_id }}"
+    assign_public_ip: True
+    wait: True
+    count: 1    
+  register: web_server
+

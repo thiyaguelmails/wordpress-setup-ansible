@@ -1,0 +1,26 @@
+# AWS Credentials
+aws_access_key:      "AKIAIMM4KY6QGSW4LJ5A"
+aws_secret_key:      "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"
+aws_region:          "us-east-1"
+
+# VPC Information
+vpc_name:            "Cleo VPC"
+vpc_cidr_block:      "10.0.0.0/16"
+
+# For Security Group Rule
+trusted_ip_cidr:     "0.0.0.0/0"
+
+# Subnets
+public_subnet_cidr:  "10.0.1.0/24"
+
+# MySQL DB details
+mysql_master_password: "wppassw0rd"
+mysql_db_name: "wordpress"
+mysql_db_user: "wordpress"
+mysql_db_password: "wpuserpassw0rd"
+
+# Docker MySQL IP - Update this value after setting up MySQL container
+mysql_db_host:       "172.17.0.2"
+
+# WordPress blog URL to configure
+wp_blog_url:         "https://ja.wordpress.org/latest-ja.tar.gz"

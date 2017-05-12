@@ -1,0 +1,48 @@
+---
+  - name: setup wordpress 
+    hosts: webserver
+    user: ubuntu
+    sudo: true
+    gather_facts: False
+    tasks:
+    - name: install php
+      shell: apt-get install php5-gd libssh2-php -y
+    - name: Update apt cache
+      apt: update_cache=yes cache_valid_time=3600
+    - name: Install required software
+      apt: name={{ item }} state=present
+      with_items:
+        - apache2
+        - php5-mysql
+        - php5
+        - libapache2-mod-php5
+        - php5-mcrypt
+        - python-mysqldb
+    - name: Download WordPress
+      get_url: url="{{ wp_blog_url }}" dest="/tmp/wordpress.tar.gz" validate_certs=no 
+    - name: Remove old deployables
+      shell: sudo rm -rf /var/www/wordpress/ 
+    - name: Extract WordPress
+      unarchive: src=/tmp/wordpress.tar.gz dest=/var/www/ copy=no
+    - name: Update default Apache site
+      lineinfile: 
+        dest=/etc/apache2/sites-enabled/000-default.conf 
+        regexp="(.)+DocumentRoot /var/www/html"
+        line="DocumentRoot /var/www/wordpress"
+      notify:
+        - restart apache
+    - name: Copy sample config file
+      command: mv /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php creates=/var/www/wordpress/wp-config.php
+    - name: Update WordPress DB Name  in config file
+      shell: sudo sed -i 's/database_name_here/{{ mysql_db_name }}/' /var/www/wordpress/wp-config.php;
+    - name: Update WordPress DB User  in config file
+      shell: sudo sed -i 's/username_here/{{ mysql_db_user }}/' /var/www/wordpress/wp-config.php;
+    - name: Update WordPress DB Password  in config file
+      shell: sudo sed -i 's/password_here/{{ mysql_db_password }}/' /var/www/wordpress/wp-config.php;
+    - name: Update WordPress DB Host  in config file
+      shell: sudo sed -i 's/localhost/{{ mysql_db_host }}/' /var/www/wordpress/wp-config.php;
+      notify:
+        - restart apache
+    handlers:
+    - name: restart apache
+      service: name=apache2 state=restarted
