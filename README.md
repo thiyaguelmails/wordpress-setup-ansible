@@ -5,11 +5,11 @@ Requirement - Linux machine Ansible setup with python, pytjon-pip & python-docke
 
 Steps:-
 
-1. Clone the git repository <> on ansible server.
+1. Clone the git repository this on ansible server.
    
-   git clone
+   git clone https://github.com/thiyaguelmails/wordpress-setup-ansible
    
-2. Create an AWS IAM user with admin previleges for Ansible and have AWS Access key and Secret access key. 
+2. Create an AWS IAM user with admin previleges for Ansible and have AWS Access key and Secret access key & update ACCESS_KEY and Secret_access_key on vars.yml file.
 
 3. Create KeyPair for wordpress web server. Copy the pem key file to ansible host. Make the key file to have read-only permission.
 
